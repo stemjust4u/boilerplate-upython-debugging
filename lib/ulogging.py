@@ -19,6 +19,11 @@ _level_dict = {
 
 _stream = sys.stderr
 
+# To print_stream to a file pass file in basicConfig
+#_stream = open('main.log', 'w')
+#print(msg % args, file=_stream)
+#_stream.close()
+
 class Logger:
 
     level = NOTSET
