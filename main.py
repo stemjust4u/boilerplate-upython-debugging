@@ -1,11 +1,39 @@
 from boot import MAIN_FILE_LOGGING, MAIN_FILE_MODE, MAIN_FILE_NAME, logfiles # Not needed but helps with python intellisense (syntax highlighting)
 import ulogging, micropython
-from timer import Timer
+from timer import Timer, TimerFunc
+from pcolor import pcolor
 import utime, uos
-from machine import Pin, ADC, PWM
+from machine import Pin, ADC, PWM, RTC
+import machine
 import gc
 gc.collect()
 micropython.alloc_emergency_exception_buf(100)
+
+def rtcdate(tpl):
+    print("{:4}-{}-{} {:2}:{:02d}:{:02d}.{}".format(tpl[0], tpl[1], tpl[2], tpl[4], tpl[5], tpl[6], tpl[7]))
+
+def localdate(tpl):
+    print("{:4}-{}-{} {:2}:{:02d}:{:02d}".format(tpl[0], tpl[1], tpl[2], tpl[3], tpl[4], tpl[5]))
+
+# localtime = (2021, 5, 6, 12, 55, 0, 0, 0) #(year, month, day, hour, minute, second, weekday, yearday)
+rtcnow = (2021, 5, 6, 0, 12, 55, 0, 0)      #(year, month, day, weekday, hours, minutes, seconds, subseconds)
+
+rtc = machine.RTC()
+rtc.datetime(rtcnow)
+print(utime.time())    # integer, seconds since 1/1/2000, returned from RTC.  Add hrs*3600 for adjustment
+print(rtc.datetime())
+print(rtcdate(rtc.datetime()))
+print((utime.localtime()))   # current time from RTC is returned. If seconds/integer is passed to it it converts to 8-tuple
+print(localdate((utime.localtime())))
+'''
+86400 seconds in a day, 3600 seconds in an hour
+
+t =utime.mktime((2018,8,16,22,0,0,3,0))  # enter a 8-tuple which expresses time as per localtime. mktime returns an integer, number of seconds since 1/1/2000
+t += 4*3600
+utime.localtime(t)
+or
+utime.localtime(utime.mktime(utime.localtime()) + 3*3600)
+'''
 
 '''
 ulogging from https://github.com/peterhinch
@@ -22,52 +50,54 @@ Update boot.py MAIN_FILE_LOGGING flag if wanting all modules to log to same file
 # If wanting modules to each be able to write to individual files then make sure autoclose=True (safe with file open/close)
 # If wanting a single module to quickly write to a log file then only enable one module and set autoclose=False
 logger_log_level= 10
-logger_setup = 1  # 0 for basicConfig, 1 for custom logger with RotatingFileHandler (RFH)
-FileMode = 2 # If logger_setup ==1  then access to modes below
+logger_type = "custom"  # 'basic' for basicConfig or 'custom' for custom logger
+FileMode = 1 # If logger_type == 'custom'  then access to modes below
             #  FileMode == 1 # no log file
             #  FileMode == 2 # write to log file
-
 logfile = __name__ + '.log'
-if logger_setup == 0: # Use basicConfig logger
+if logger_type == 'basic': # Use basicConfig logger
     ulogging.basicConfig(level=logger_log_level) # Change logger global settings
     logger_main = ulogging.getLogger(__name__)
-elif logger_setup == 1 and FileMode == 1:        # Using custom logger
+elif logger_type == 'custom' and FileMode == 1:        # Using custom logger
     logger_main = ulogging.getLogger(__name__)
     logger_main.setLevel(logger_log_level)
-elif logger_setup == 1 and FileMode == 2 and not MAIN_FILE_LOGGING: # Using custom logger with output to log file
+elif logger_type == 'custom' and FileMode == 2 and not MAIN_FILE_LOGGING: # Using custom logger with output to log file
     logger_main = ulogging.getLogger(__name__, logfile, mode='w', autoclose=True, filetime=5000)  # w/wb to over-write, a/ab to append, autoclose (with method), file time in ms to keep file open
     logger_main.setLevel(logger_log_level)
     logfiles.append(logfile)
-elif logger_setup == 1 and FileMode == 2 and MAIN_FILE_LOGGING:            # Using custom logger with output to main log file
+elif logger_type == 'custom' and FileMode == 2 and MAIN_FILE_LOGGING:            # Using custom logger with output to main log file
     logger_main = ulogging.getLogger(__name__, MAIN_FILE_NAME, MAIN_FILE_MODE, 0)  # over ride with MAIN_FILE settings in boot.py
     logger_main.setLevel(logger_log_level)
 
 logger_main.info('{0} {1}'.format(utime.localtime(), logger_main))
 
-@Timer
+t = Timer()
+t.start()
+
+@TimerFunc
 def integer(n):
     for i in range(n):
         x = 1 + 1
 
-@Timer
+@TimerFunc
 def float(n):
     for i in range(n):
         x = 1.5 + 1.5
 
-@Timer
+@TimerFunc
 def getpinvalue(pin):
     return pin.value()
 
-@Timer
+@TimerFunc
 def setpinvalue(pin, value):
     pin.value(value)
 
-@Timer
+@TimerFunc
 def set_4_pins(pins, value):
     for pin in pins:
         pin.value(value)
 
-@Timer
+@TimerFunc
 def get_4_pins_list(pins, outgoing):
     outgoing[0] = pins[0].value()
     outgoing[1] = pins[1].value()
@@ -75,13 +105,13 @@ def get_4_pins_list(pins, outgoing):
     outgoing[3] = pins[3].value()
     return outgoing
 
-@Timer
+@TimerFunc
 def get_4_pins_list_loop(pins, outgoing):
     for i, pin in enumerate(pins):
         outgoing[i] = pin.value()
     return outgoing
 
-@Timer
+@TimerFunc
 def get_4_pins_dict(pins, outgoing):
     outgoing['0'] = pins[0].value()
     outgoing['1'] = pins[1].value()
@@ -89,11 +119,11 @@ def get_4_pins_dict(pins, outgoing):
     outgoing['3'] = pins[3].value()
     return outgoing
 
-@Timer
+@TimerFunc
 def getADC(pin):
     return pin.read()
 
-@Timer
+@TimerFunc
 def getADC_4pins(pins, outgoing):
     outgoing[0] = pins[0].read()
     outgoing[1] = pins[1].read()
@@ -101,7 +131,7 @@ def getADC_4pins(pins, outgoing):
     outgoing[3] = pins[3].read()
     return outgoing
 
-@Timer
+@TimerFunc
 def setPWM(pin):
     pin.duty(75)  
 
@@ -155,25 +185,26 @@ adcvalue = getADC(adc)
 
 setPWM(pwm)
 
-print('Log file clean up')
+logger_main.info("Total time: {0} ms".format(t.stop()/1000))
+
+logger_main.info('Log file clean up')
 ftotal = 0
 for file in logfiles:
     filesize = uos.stat(file)[6]/1000
-    print('file:{0} size: {1:.1f}kb '.format(file, filesize))
+    logger_main.info('file:{0} size: {1:.1f}kb '.format(file, filesize))
     ftotal += filesize
     with open(file, 'r') as f:
-        print('{0} line 1: {1}'.format(file, f.readline().rstrip("\n")))
-        print('           line 2: {0}'.format(f.readline().rstrip("\n")))
-        print('           line 3: {0}'.format(f.readline().rstrip("\n")))
-        print('Closed file: {0}'.format(file))
-print('Logfiles used in program: {0:.1f}kb'.format(ftotal))
+        logger_main.info('{0} line 1: {1}'.format(file, f.readline().rstrip("\n")))
+        logger_main.info('           line 2: {0}'.format(f.readline().rstrip("\n")))
+        logger_main.info('           line 3: {0}'.format(f.readline().rstrip("\n")))
+        logger_main.info('Closed file: {0}'.format(file))
+logger_main.info('Logfiles used in program: {0:.1f}kb'.format(ftotal))
 
 ftotal = 0
 for file in uos.listdir("/lib"):
     ftotal += uos.stat("/lib/" + file)[6]/1000
-print('All /lib files: {0:.1f}kb'.format(ftotal))
+logger_main.info('All /lib files: {0:.1f}kb'.format(ftotal))
 
 for file in uos.listdir():
     ftotal += uos.stat(file)[6]/1000
-print('TOTAL: {0:.1f}kb'.format(ftotal))
-    
+logger_main.info('{0}TOTAL: {1:.1f}kb{2}'.format(pcolor.BOW, ftotal, pcolor.ENDC))
