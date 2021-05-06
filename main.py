@@ -1,7 +1,7 @@
-from boot import MAIN_FILE_LOGGING, MAIN_FILE_MODE, MAIN_FILE_NAME, logfiles # Not needed but helps with python intellisense (syntax highlighting)
+from boot import MAIN_FILE_LOGGING, MAIN_FILE_MODE, MAIN_FILE_NAME, CPUFREQ, logfiles # Not needed but helps with python intellisense (syntax highlighting)
 import ulogging, micropython
 from timer import Timer, TimerFunc
-from pcolor import pcolor
+from mytools import pcolor, rtcdate, localdate
 import utime, uos
 from machine import Pin, ADC, PWM, RTC
 import machine
@@ -9,42 +9,20 @@ import gc
 gc.collect()
 micropython.alloc_emergency_exception_buf(100)
 
-def rtcdate(tpl):
-    print("{:4}-{}-{} {:2}:{:02d}:{:02d}.{}".format(tpl[0], tpl[1], tpl[2], tpl[4], tpl[5], tpl[6], tpl[7]))
+if machine.reset_cause() == machine.DEEPSLEEP_RESET:
+    print('woke from a deep sleep')
 
-def localdate(tpl):
-    print("{:4}-{}-{} {:2}:{:02d}:{:02d}".format(tpl[0], tpl[1], tpl[2], tpl[3], tpl[4], tpl[5]))
+machine.freq(CPUFREQ)
 
-# localtime = (2021, 5, 6, 12, 55, 0, 0, 0) #(year, month, day, hour, minute, second, weekday, yearday)
-rtcnow = (2021, 5, 6, 0, 12, 55, 0, 0)      #(year, month, day, weekday, hours, minutes, seconds, subseconds)
-
-rtc = machine.RTC()
-rtc.datetime(rtcnow)
-print(utime.time())    # integer, seconds since 1/1/2000, returned from RTC.  Add hrs*3600 for adjustment
-print(rtc.datetime())
-print(rtcdate(rtc.datetime()))
-print((utime.localtime()))   # current time from RTC is returned. If seconds/integer is passed to it it converts to 8-tuple
-print(localdate((utime.localtime())))
-'''
-86400 seconds in a day, 3600 seconds in an hour
-
-t =utime.mktime((2018,8,16,22,0,0,3,0))  # enter a 8-tuple which expresses time as per localtime. mktime returns an integer, number of seconds since 1/1/2000
-t += 4*3600
-utime.localtime(t)
-or
-utime.localtime(utime.mktime(utime.localtime()) + 3*3600)
-'''
-
-'''
-ulogging from https://github.com/peterhinch
-CRITICAL = 50
-ERROR    = 40
-WARNING  = 30
-INFO     = 20
-DEBUG    = 10
-NOTSET   = 0
-Update boot.py MAIN_FILE_LOGGING flag if wanting all modules to log to same file 
-'''
+initial_open_mode = "w"    # Open with 'w' to start a new log file. Can change to 'a' to keep older logs.
+if MAIN_FILE_LOGGING:
+    with open(MAIN_FILE_NAME, initial_open_mode) as f:
+        f.write("cpu freq: {0} GHz\n".format(CPUFREQ/10**9)) 
+        f.write("All module debugging will write to file: {0} with mode: {1}\n".format(MAIN_FILE_NAME, MAIN_FILE_MODE))
+        if machine.reset_cause() == machine.DEEPSLEEP_RESET:
+            f.write('{0}, woke from a deep sleep'.format(utime.localtime()))
+    print("All module debugging will write to file: {0} with mode: {1}\n".format(MAIN_FILE_NAME, MAIN_FILE_MODE))
+    logfiles.append(MAIN_FILE_NAME)
 
 # If wanting all modules to write to the same MAIN FILE then enable MAIN_FILE_LOGGING in boot.py
 # If wanting modules to each be able to write to individual files then make sure autoclose=True (safe with file open/close)
@@ -69,7 +47,7 @@ elif logger_type == 'custom' and FileMode == 2 and MAIN_FILE_LOGGING:           
     logger_main = ulogging.getLogger(__name__, MAIN_FILE_NAME, MAIN_FILE_MODE, 0)  # over ride with MAIN_FILE settings in boot.py
     logger_main.setLevel(logger_log_level)
 
-logger_main.info('{0} {1}'.format(utime.localtime(), logger_main))
+logger_main.info('localtime: {0}'.format(localdate(utime.localtime())))
 
 t = Timer()
 t.start()

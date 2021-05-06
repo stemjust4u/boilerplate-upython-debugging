@@ -4,7 +4,7 @@ import utime
 
 logger_log_level= 10
 logger_type = "custom"  # 'basic' for basicConfig or 'custom' for custom logger
-FileMode = 2 # If logger_type == 'custom'  then access to modes below
+FileMode = 1 # If logger_type == 'custom'  then access to modes below
             #  FileMode == 1 # no log file
             #  FileMode == 2 # write to log file
 logfile = __name__ + '.log'

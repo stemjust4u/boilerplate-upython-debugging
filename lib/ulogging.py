@@ -1,6 +1,6 @@
-from boot import MAIN_FILE_LOGGING, MAIN_FILE_MODE, MAIN_FILE_NAME, logfiles
+from boot import MAIN_FILE_LOGGING, MAIN_FILE_MODE, MAIN_FILE_NAME
 import sys, uos
-from pcolor import pcolor
+from mytools import pcolor
 from machine import Timer
 
 CRITICAL = 50
