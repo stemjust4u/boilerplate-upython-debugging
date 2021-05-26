@@ -4,7 +4,7 @@ from timer import Timer, TimerFunc
 from mytools import pcolor, rtcdate, localdate
 from machine import Pin, ADC, PWM, RTC
 from lib.umqttsimple import MQTTClient
-import machine
+import machine, sys
 import gc
 gc.collect()
 micropython.alloc_emergency_exception_buf(100)
@@ -187,7 +187,7 @@ clkPin, dtPin, button_rotenc = 15, 4, 25
 pinsummary.append(clkPin)
 pinsummary.append(dtPin)
 if button_rotenc is not None: pinsummary.append(button_rotenc)
-rotaryEncoderSet[device] = RotaryEncoder(clkPin, dtPin, button_rotenc, data_keys[0], data_keys[1], logger_rotenc)
+#rotaryEncoderSet[device] = RotaryEncoder(clkPin, dtPin, button_rotenc, data_keys[0], data_keys[1], logger_rotenc)
 
 
 main_logger.info('Pins in use:{0}'.format(sorted(pinsummary)))
@@ -238,14 +238,14 @@ for device, rotenc in rotaryEncoderSet.items():
 
 if getdata:
     t.start()
-    for device, adc in adcSet.items():
-        deviceD[device]['data'] = adc.getdata()
-        if buttonADC_pressed or deviceD[device]['data'] is not None:         # Update if button pressed or voltage changed or time limit hit
-            deviceD[device]['send'] = True
-            if deviceD[device]['data'] is not None:
-                main_logger.debug("Got data {} {}".format(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data'])))       
-            if switchON: deviceD[device]['data']['buttoni'] = str(buttonADC.value())
-            buttonADC_pressed = False
+    #for device, adc in adcSet.items():
+    #    deviceD[device]['data'] = adc.getdata()
+    #    if buttonADC_pressed or deviceD[device]['data'] is not None:         # Update if button pressed or voltage changed or time limit hit
+    #        deviceD[device]['send'] = True
+    #        if deviceD[device]['data'] is not None:
+    #            main_logger.debug("Got data {} {}".format(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data'])))       
+    #        if switchON: deviceD[device]['data']['buttoni'] = str(buttonADC.value())
+    #        buttonADC_pressed = False
     getdata = False
     getdata_time = t.stop()
     main_logger.debug("Get data took: {0} ms".format(getdata_time/1000))
@@ -257,11 +257,11 @@ if sendmsgs:
             mqtt_client.publish(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data']))
             main_logger.debug('Published msg {0} with payload {1}'.format(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data'])))
             deviceD[device]['send'] = False
-    for device, adc in adcSet.items():
-        if deviceD[device]['send']:
-            mqtt_client.publish(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data']))
-            main_logger.debug("Published msg {} {}".format(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data'])))
-            deviceD[device]['send'] = False
+    #for device, adc in adcSet.items():
+    #    if deviceD[device]['send']:
+    #        mqtt_client.publish(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data']))
+    #        main_logger.debug("Published msg {} {}".format(deviceD[device]['pubtopic'], ujson.dumps(deviceD[device]['data'])))
+    #        deviceD[device]['send'] = False
     sendmsgs = False
     sendmsg_time = t.stop()
     main_logger.debug("Sending msg took: {0} ms".format(sendmsg_time/1000))
@@ -329,10 +329,10 @@ def setPWM(pin):
 
 n=10
 integer(n)
-logger_main.debug('{0} ran {1} times'.format(utime.localtime(), n))
+main_logger.debug('{0} ran {1} times'.format(utime.localtime(), n))
 
 float(n)
-logger_main.debug('{0} ran {1} times'.format(utime.localtime(), n))
+main_logger.debug('{0} ran {1} times'.format(utime.localtime(), n))
 
 pinlist = [5, 4, 2, 16]
 io_pin = [0]*len(pinlist)
@@ -349,17 +349,17 @@ pin = 23
 pwm = PWM(Pin(pin), 50)
 
 onoff = getpinvalue(io_pin[2])
-logger_main.debug(onoff)
+main_logger.debug(onoff)
 setpinvalue(io_pin[2], 1)
 utime.sleep_ms(1000)
 setpinvalue(io_pin[2], 0)
 
 outgoing = [0]*len(pinlist)
 data = get_4_pins_list(io_pin, outgoing)
-logger_main.debug(data)
+main_logger.debug(data)
 
 data = get_4_pins_list_loop(io_pin, outgoing)
-logger_main.debug(data)
+main_logger.debug(data)
 
 adcpins = [32, 33, 34, 35]
 adc_pin = [0]*len(adcpins)
@@ -367,37 +367,37 @@ for i, pin in enumerate(adcpins):
     adc_pin[i] = ADC(Pin(pin))
     adc_pin[i].atten(ADC.ATTN_11DB)
 adcdata = getADC_4pins(adc_pin, outgoing)
-logger_main.debug(adcdata)
+main_logger.debug(adcdata)
 
 outgoing = {}
 data = get_4_pins_dict(io_pin, outgoing)
-logger_main.debug(data)
+main_logger.debug(data)
 
 adcvalue = getADC(adc)
 
 setPWM(pwm)
 
-logger_main.info('Log file clean up')
+main_logger.info('Log file clean up')
 ftotal = 0
 for file in logfiles:
     filesize = uos.stat(file)[6]/1000
-    logger_main.info('file:{0} size: {1:.1f}kb '.format(file, filesize))
+    main_logger.info('file:{0} size: {1:.1f}kb '.format(file, filesize))
     ftotal += filesize
     with open(file, 'r') as f:
-        logger_main.info('{0} line 1: {1}'.format(file, f.readline().rstrip("\n")))
-        logger_main.info('           line 2: {0}'.format(f.readline().rstrip("\n")))
-        logger_main.info('           line 3: {0}'.format(f.readline().rstrip("\n")))
-        logger_main.info('Closed file: {0}'.format(file))
-logger_main.info('Logfiles used in program: {0:.1f}kb'.format(ftotal))
+        main_logger.info('{0} line 1: {1}'.format(file, f.readline().rstrip("\n")))
+        main_logger.info('           line 2: {0}'.format(f.readline().rstrip("\n")))
+        main_logger.info('           line 3: {0}'.format(f.readline().rstrip("\n")))
+        main_logger.info('Closed file: {0}'.format(file))
+main_logger.info('Logfiles used in program: {0:.1f}kb'.format(ftotal))
 
 ftotal = 0
 for file in uos.listdir("/lib"):
     ftotal += uos.stat("/lib/" + file)[6]/1000
-logger_main.info('All /lib files: {0:.1f}kb'.format(ftotal))
+main_logger.info('All /lib files: {0:.1f}kb'.format(ftotal))
 
 for file in uos.listdir():
     ftotal += uos.stat(file)[6]/1000
-logger_main.info('{0}TOTAL: {1:.1f}kb{2}'.format(pcolor.BOW, ftotal, pcolor.ENDC))
+main_logger.info('{0}TOTAL: {1:.1f}kb{2}'.format(pcolor.BOW, ftotal, pcolor.ENDC))
 
-logger_main.info(rtcdate(rtc.datetime()))
-logger_main.info("Total time: {0} ms".format(t.stop()/1000))
+main_logger.info(rtcdate(rtc.datetime()))
+main_logger.info("Total time: {0} ms".format(t.stop()/1000))
