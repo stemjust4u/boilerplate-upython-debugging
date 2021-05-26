@@ -9,6 +9,9 @@ import gc
 gc.collect()
 micropython.alloc_emergency_exception_buf(100)
 
+tmain = Timer()
+tmain.start()
+
 def connect_wifi(WIFI_SSID, WIFI_PASSWORD):
     station = network.WLAN(network.STA_IF)
 
@@ -340,6 +343,10 @@ for i, pin in enumerate(pinlist):
     io_pin[i] = Pin(pin, Pin.OUT) # 2 is the internal LED
 
 set_4_pins(io_pin, 0)
+utime.sleep_ms(1000)
+set_4_pins(io_pin, 1)
+utime.sleep_ms(1000)
+set_4_pins(io_pin, 0)
 
 pin = 32
 adc = ADC(Pin(pin))
@@ -400,4 +407,4 @@ for file in uos.listdir():
 main_logger.info('{0}TOTAL: {1:.1f}kb{2}'.format(pcolor.BOW, ftotal, pcolor.ENDC))
 
 main_logger.info(rtcdate(rtc.datetime()))
-main_logger.info("Total time: {0} ms".format(t.stop()/1000))
+main_logger.info("Total time: {0} ms".format(tmain.stop()/1000))

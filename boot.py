@@ -6,7 +6,7 @@ esp.osdebug(None)
 #webrepl.start()
 
 # SET CPU FREQUENCY
-CPUFREQ = 80000000  # Can set to 160000000 or 80000000 to save power, but loop time will be much slower
+CPUFREQ = 240000000  # Can set to 160000000 or 80000000 to save power, but loop time will be much slower
 machine.freq(CPUFREQ)
 
 # SET UP REAL TIME CLOCK. EITHER MANUALLY SET DATETIME OR USE LOCAL NETWORK
